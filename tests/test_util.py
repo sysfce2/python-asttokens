@@ -114,6 +114,26 @@ def test_expect_token():
     asttokens.util.expect_token(tok, token.OP)
 
 
+def test_generate_tokens_normalizes_lone_carriage_returns():
+  tokens = list(asttokens.util.generate_tokens("\ry.y\n"))
+  coding_tokens = [tok for tok in tokens if tok.type in (token.NAME, token.OP)]
+
+  assert [(tok.type, tok.string, tok.start, tok.end) for tok in coding_tokens] == [
+    (token.NAME, "y", (2, 0), (2, 1)),
+    (token.OP, ".", (2, 1), (2, 2)),
+    (token.NAME, "y", (2, 2), (2, 3)),
+  ]
+
+  crlf_tokens = list(asttokens.util.generate_tokens("\r\ny.y\n"))
+  assert crlf_tokens[0].string == "\r\n"
+
+  triple_tokens = list(asttokens.util.generate_tokens('value = """a\rb"""\n'))
+  string_token = next(tok for tok in triple_tokens if tok.type == token.STRING)
+  assert string_token.string == '"""a\nb"""'
+  assert string_token.start == (1, 8)
+  assert string_token.end == (2, 4)
+
+
 def test_combine_tokens():
     from tokenize import TokenInfo, generate_tokens, ERRORTOKEN, OP, NUMBER, NAME
     from asttokens.util import combine_tokens, patched_generate_tokens

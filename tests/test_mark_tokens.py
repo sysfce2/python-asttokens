@@ -303,6 +303,21 @@ bar = ('x y z'   # comment2
           "%s:%s" % ("AssignName" if self.is_astroid_test else "Name", source.split("=")[0]),
         })
 
+  def test_mixed_line_endings(self):
+      # Test of https://github.com/gristlabs/asttokens/issues/105
+      source = "a=1\rb.c\r\nd=2\n\re.f\r\rg=3\rh.i"
+      atok = self.create_asttokens(source)
+      self.assertEqual(atok.tokens[-1].type, token.ENDMARKER)
+      self.assertEqual(
+        [atok.get_text(stmt) for stmt in atok.tree.body],
+        ["a=1", "b.c", "d=2", "e.f", "g=3", "h.i"],
+      )
+      for node in util.walk(atok.tree):
+        first, last = getattr(node, 'first_token', None), getattr(node, 'last_token', None)
+        if first is not None:
+          self.assertNotEqual(last.type, token.ENDMARKER, node)
+          self.assertLessEqual(last.index, len(atok.tokens) - 1)
+
   def test_bytes_smoke(self):
       const = 'Const' if self.is_astroid_test else (
           'Constant'
@@ -931,4 +946,3 @@ if 0:
     m = self.create_mark_checker(source)
     assert 'DictComp'  in str(m.view_nodes_at(0, 0))
 
-    
